@@ -15,17 +15,13 @@ namespace app_road
     {
         string[] cities = { "Город1", "Город2", "Город3", "Город4", "Город5", "Город6", "Город7", "Город8", "Город9", "Город10", "Город11", "Город12", "Город13", "Город14", "Город15", "Город16", "Город17", "Город18", "Город19" };
         DataTable _data = new DataTable(); // данные из таблицы excel
-        int type_road = 1; // 0 - прямые перееды, 1 - с пересадками
-        int type_calc = 0; // 0 - занимающие меньшее кол-во пересадок, 1 - самы бюджетный вариант 
 
         public Form1()
         {
             InitializeComponent();
             load_data();
-
             load_start();
             load_end();
-            radioButton2.Select();
         }
 
         /// <summary>
@@ -33,7 +29,7 @@ namespace app_road
         /// </summary>
         private void load_start()
         {
-            comboBox1.Items.AddRange(cities);
+            comboBox1.Items.AddRange(cities); // Добавление строк(городов) в раскрывающийся список
         }
 
         /// <summary>
@@ -41,11 +37,8 @@ namespace app_road
         /// </summary>
         private void load_end()
         {
-            comboBox2.ResetText();
-            if(type_road == 0)
-                comboBox2.Items.AddRange(get_cities());
-            else
-                comboBox2.Items.AddRange(cities);
+            comboBox2.ResetText(); // Сброс текста пункта прибытия, происходит когда меняется пункт отправления
+            comboBox2.Items.AddRange(get_cities()); // Добавление строк(городов) в раскрывающийся список
         }
 
         /// <summary>
@@ -56,20 +49,19 @@ namespace app_road
         private void calculate(object sender, EventArgs e)
         {
 
-            dataGridView1.Rows.Clear();
-            string start = (string)comboBox1.SelectedItem;
-            string end = (string)comboBox2.SelectedItem;
-            
-            var index_r = comboBox1.SelectedIndex;
-            var index_c = cities.ToList().IndexOf(end) + 1;
+            dataGridView1.Rows.Clear();   // Очищение таблицы "Доступные билеты"
+            string start = (string)comboBox1.SelectedItem;   // Получение города из поля "Пуенкт отправления"
+            string end = (string)comboBox2.SelectedItem;   // Получение города из поля "Пуенкт прибытия"
 
-            var i = _data.Rows[index_r][index_c];
+            var index_r = comboBox1.SelectedIndex; // Получаем индекс выбраного города отправления
+            var index_c = cities.ToList().IndexOf(end) + 1; // Находим индекс города прибытия 
+
+            var i = _data.Rows[index_r][index_c]; // получение суммы билета
             if(i != DBNull.Value)
             {
-                dataGridView1.Rows.Add(start, end, i);
-                result(i);
+                dataGridView1.Rows.Add(start, end, i); // Добавление записи в таблицу "Доступные билеты"
+                result(i); // Запись данных в Итого
             }
-            calc(index_r, index_c);
         }
 
         /// <summary>
@@ -82,104 +74,58 @@ namespace app_road
         }
 
         /// <summary>
-        /// ЗАгрузка таблицы Excel, для этого создается подключение к excel, котрое выступает в качестве БД
+        /// Загрузка таблицы Excel, для этого создается подключение к excel, котрое выступает в качестве БД
         /// </summary>
         private void load_data()
         {
-            String name = "Items";
-            String constr = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" +
+            string name = "Items"; // Название "Листа" в таблице с городами
+            string connectionString = "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=" +
                             "D:\\Users\\84991\\Documents\\Sample.xlsx" + // Здесь указан путь до excel, нужно указать путь к файлу, где он у тебя храниться на ПК, по файлу ПКМ -> Свйоства и там есть пункт "Расположение", только слэши нужно указать как здесь
-                            ";Extended Properties='Excel 12.0 XML;HDR=YES;';";
+                            ";Extended Properties='Excel 12.0 XML;HDR=YES;';"; // connectionString строка подключения к БД
 
-            OleDbConnection con = new OleDbConnection(constr);
-            OleDbCommand oconn = new OleDbCommand("Select * From [" + name + "$]", con);
-            con.Open();
+            OleDbConnection connect = new OleDbConnection(connectionString); // подключение к БД
+            OleDbCommand cmd = new OleDbCommand("Select * From [" + name + "$]", connect); // команда(запрос) для получения данных из БД(excel)
+            connect.Open(); // открытие подключения
 
-            OleDbDataAdapter sda = new OleDbDataAdapter(oconn);
-            sda.Fill(_data);
+            OleDbDataAdapter d = new OleDbDataAdapter(cmd); // обработка выполнения команды
+            d.Fill(_data); // добавление данных в DataTable, в нашу глобальную переменную
         }
 
         /// <summary>
-        /// Получение списка городов во второй селектор(Пункт прибытия) в случае, если выбрантип поездки "Прямая"
+        /// Получение списка городов во второй селектор(Пункт прибытия) в случае, если выбран тип поездки "Прямая"
         /// </summary>
         /// <returns></returns>
         private string[] get_cities()
         {
-            comboBox2.Items.Clear();
-            var _cities = new List<string>();
+            comboBox2.Items.Clear(); // очищается поле "Пунк прибятия"
+            var _cities = new List<string>(); // создается новый пустой строковый список
 
-            if (comboBox1.SelectedItem != null)
+            if (comboBox1.SelectedItem != null) // проверяем, что в поле "Пункт отправления" выбран город 
             {
-                var ind = comboBox1.SelectedIndex;
+                var ind = comboBox1.SelectedIndex; // получение индекса города
                
-                for(int i = 1; i < _data.Columns.Count; i++)
+                for(int i = 1; i < _data.Columns.Count; i++)  // цикл по колонкам, i начинается с 1 из-за того, что он первую колонку(под буквой A) считает тоже, и соответственно у нее индекс 0, в последствии мы проверяем на пустая ли колонка или нет, если не пустая то выводим этот город в возможный вариант прибытия
                 {
-                    var n = _data.Rows[ind][i];
-                    if(n != DBNull.Value)
+                    var n = _data.Rows[ind][i]; // получаем значение сторки(города отправления), и i каждый столбец
+                    if(n != DBNull.Value) // вместо null проверяем на DBNull.Value, поскольку используем DataTable(без него никак), а там значение null как такового нет, но по сути DBNull.Value обозначает пустую ячейку
                     {
-                        _cities.Add(_data.Columns[i].ToString());
+                        _cities.Add(_data.Columns[i].ToString()); // Если ячейка не пустая, значит есть билет до этого города, здесь происходит добавление в возможные города прибытия
                     }
                 }
             }
 
-            return _cities.ToArray();
-        }
-
-        /// <summary>
-        /// Это в работе
-        /// </summary>
-        /// <param name="start">Откуда начинаются все поездки</param>
-        /// <param name="end"> куда по итогу нужно приехать</param>
-        private void calc(int start, int end)
-        {
-            get_path(start, end, new List<int>());
-        }
-
-        /// <summary>
-        /// Маршруты, по идее суда должны записываться маршруты следования, из них нужно будет выбрать самы короткий и который позваоляет приехать в нужный для нас город
-        /// </summary>
-        private List<List<int>> path = new List<List<int>>();
-
-        /// <summary>
-        /// Вот именно сейчас у меня с этим проблема, нужно подумать, как определять поездки и добавлять в маршрут
-        /// </summary>
-        /// <param name="ind">НАчало отправления, если мы куда то приезжаем, суда передается новое место</param>
-        /// <param name="end">Самый конечный пункт назначения</param>
-        /// <param name="_path">Путь маршрута, который передается из раза в раз, но из-за особенностей C# надо придумывать обходное решение этой проблемы</param>
-        private void get_path(int ind, int end, List<int> _path)
-        {
-            var d = _data.Rows[ind];
-            var r = new List<int>();
-            r.AddRange(_path);
-            r.Add(ind + 1);
-
-            for (int i = 1; i < _data.Columns.Count; i++)
-            {
-                if (d[i] != DBNull.Value)
-                {
-                    if (i == end)
-                    {
-
-                        path.Add(r);
-                        return;
-                    }
-                    else
-                    {
-                        _path.Add(i);
-                            get_path(i - 1, end, _path);
-                    }
-                }
-            }
+            return _cities.ToArray(); // возвращаем города, в которые можно отправиться
         }
 
         /// <summary>
         /// Этот метод нужен для загрузки доступных Пунктов прибытия, куда можно приехать, если выбран Прямой тип поездки( чтобы сменить тип поездки нужно type_road = 0 )
+        /// Этот метод срабатывает при изменении "Пункта отправления"
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         private void load_end(object sender, EventArgs e)
         {
-            load_end();
+            load_end(); 
         }
     }
 }
